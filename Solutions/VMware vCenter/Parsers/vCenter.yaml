@@ -7,20 +7,21 @@ Category: Microsoft Sentinel Parser
 FunctionName: vCenter
 FunctionAlias: vCenter
 FunctionQuery: |
+    let allvcenter = union vcenter_CL,AVSSyslog;
     let vCenter_Login =() {
-    vcenter_CL
+    allvcenter
     | where Message has ("UserLoginSessionEvent")
     | parse Message  with * "Event [" EventId:string "] [1-1] [" EventTime:datetime "] [" EventType:string "] [" EventSeverity "]" * "[User " DomainName:string "\\" Username:string "@" SourceIP " logged in as " UserAgent:string "]"
     };
-    let vCenter_Logout =() {vcenter_CL
+    let vCenter_Logout =() {allvcenter
     | where Message has ("UserLogoutSessionEvent")
     | parse Message with * "Event [" EventId:string "] [1-1] [" EventTime:datetime "] [" EventType:string "] [" EventSeverity "]" * "[User" DomainName:string "\\" Username:string "@" SourceIP " logged out (login time:" LoginTime:string ", number of API invocations: " APIInvocationCount:int ", user agent:" UserAgent:string ")]"
     };
-    let vCenter_Role=() {vcenter_CL
+    let vCenter_Role=() {allvcenter
     | where Message has_any("RoleAddedEvent","RoleRemovedEvent")
     | parse Message with * " " * " " Hostname:string "vpxd" * "Event [" EventId:string "] [1-1] [" EventTime:datetime "] [" EventType:string "] [" EventSeverity:string "]" * "[New role " RoleName:string " " Operation:string  "]"
     };
-    let vCenter_RoleModified=() {vcenter_CL
+    let vCenter_RoleModified=() {allvcenter
     | where Message has ("RoleUpdatedEvent")
     | parse Message with * " " * " " Hostname:string "vpxd" * "Event [" EventId:string "] [1-1] [" EventTime:datetime "] [" EventType:string "] [" EventSeverity:string "]" * "Previous name: " OldRoleName:string ", new name "NewRoleName:string " Added privileges: " AddedPriviledges:string " Removed privileges: " RemovedPriviledges:string "]"
     };
